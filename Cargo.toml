@@ -1,0 +1,22 @@
+[package]
+name = "workspace-keeper"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+description = "Inspect idle Git workspaces and explicitly retire regenerable caches"
+publish = false
+
+[[bin]]
+name = "keeper"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1.0.154"
+serde_yaml_ng = "0.10.0"
+cap-std = "4.0.3"
+# 0.11.1 raises MSRV to 1.88; retain the project's 1.86 toolchain.
+sha2 = "=0.11.0"
+
+[profile.release]
+strip = true
+
