@@ -625,7 +625,8 @@ fn inventory_cross_reference_examples_remain_bounded() {
     for n in 0..400 {
         f.write(&format!("project{n}/rust-toolchain"), "stable");
     }
-    let (out, report) = f.run(&[]);
+    // Keep generic parent summaries from crowding out the tiny toolchain fixtures.
+    let (out, report) = f.run(&["--depth", "0"]);
     assert!(out.status.success());
     let rows: Vec<_> = report["areas"]
         .as_array()
