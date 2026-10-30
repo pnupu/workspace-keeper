@@ -617,9 +617,19 @@ fn inventory_matches_rust_channels_dates_and_hosts_separately() {
 fn inventory_cross_reference_examples_remain_bounded() {
     let f = Fixture::new();
     for n in 0..100 {
+        let mut state = (n as u32) + 1;
+        // Pseudorandom bytes keep the fixture size stable on compressed filesystems.
+        let payload: Vec<u8> = (0..64 * 1024)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                (state >> 24) as u8
+            })
+            .collect();
         f.write(
             &format!("host{n}/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc"),
-            vec![1; 64 * 1024],
+            payload,
         );
     }
     for n in 0..400 {
