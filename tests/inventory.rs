@@ -619,22 +619,25 @@ fn inventory_cross_reference_examples_remain_bounded() {
     for n in 0..100 {
         f.write(
             &format!("host{n}/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc"),
-            "binary",
+            vec![1; 64 * 1024],
         );
     }
     for n in 0..400 {
         f.write(&format!("project{n}/rust-toolchain"), "stable");
     }
-    // Keep generic parent summaries from crowding out the tiny toolchain fixtures.
-    let (out, report) = f.run(&["--depth", "0"]);
+    // One generic host row per toolchain leaves room for every toolchain, while
+    // the smaller project rows exercise eviction alongside reference bounding.
+    let (out, report) = f.run(&["--depth", "1"]);
     assert!(out.status.success());
+    assert_eq!(report["areas"].as_array().unwrap().len(), 256);
+    assert!(report["areas_omitted"].as_u64().unwrap() > 0);
     let rows: Vec<_> = report["areas"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|a| a["category"] == "toolchain")
         .collect();
-    assert!(!rows.is_empty());
+    assert_eq!(rows.len(), 100);
     for row in rows {
         assert_eq!(row["reference_count"], 400);
         assert_eq!(row["referenced_by"].as_array().unwrap().len(), 5);
