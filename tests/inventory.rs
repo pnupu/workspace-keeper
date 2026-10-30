@@ -617,23 +617,37 @@ fn inventory_matches_rust_channels_dates_and_hosts_separately() {
 fn inventory_cross_reference_examples_remain_bounded() {
     let f = Fixture::new();
     for n in 0..100 {
+        let mut state = (n as u32) + 1;
+        // Pseudorandom bytes keep the fixture size stable on compressed filesystems.
+        let payload: Vec<u8> = (0..64 * 1024)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                (state >> 24) as u8
+            })
+            .collect();
         f.write(
             &format!("host{n}/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc"),
-            "binary",
+            payload,
         );
     }
     for n in 0..400 {
         f.write(&format!("project{n}/rust-toolchain"), "stable");
     }
-    let (out, report) = f.run(&[]);
+    // One generic host row per toolchain leaves room for every toolchain, while
+    // the smaller project rows exercise eviction alongside reference bounding.
+    let (out, report) = f.run(&["--depth", "1"]);
     assert!(out.status.success());
+    assert_eq!(report["areas"].as_array().unwrap().len(), 256);
+    assert!(report["areas_omitted"].as_u64().unwrap() > 0);
     let rows: Vec<_> = report["areas"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|a| a["category"] == "toolchain")
         .collect();
-    assert!(!rows.is_empty());
+    assert_eq!(rows.len(), 100);
     for row in rows {
         assert_eq!(row["reference_count"], 400);
         assert_eq!(row["referenced_by"].as_array().unwrap().len(), 5);
